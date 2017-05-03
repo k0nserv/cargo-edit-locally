@@ -11,7 +11,7 @@ out dependencies of a crate for local modification.
 Currently this can be installed with:
 
 ```
-$ cargo install --git https://github.com/alexcrichton/cargo-edit-locally
+$ cargo install cargo-edit-locally
 ```
 
 You can also install [precompiled
