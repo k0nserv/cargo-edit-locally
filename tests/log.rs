@@ -108,7 +108,7 @@ fn nested() {
 
     let repo = git2::Repository::open(dir.join("env_logger")).unwrap();
     let id = repo.head().unwrap().target().unwrap().to_string();
-    assert_eq!(id, "1c79a9c8ddebce3f0037fcdc6783e682cb87bce2");
+    assert_eq!(id, "d0c2f474e586f97fe8c212421beff2e464099874");
 }
 
 fn run(cmd: &mut Command) {
