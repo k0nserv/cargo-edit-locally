@@ -3,8 +3,8 @@
 [![Build Status](https://travis-ci.org/alexcrichton/cargo-edit-locally.svg?branch=master)](https://travis-ci.org/alexcrichton/cargo-edit-locally)
 [![Build status](https://ci.appveyor.com/api/projects/status/qx69c85cp1irk0ps?svg=true)](https://ci.appveyor.com/project/alexcrichton/cargo-edit-locally)
 
-This is a [Cargo](http://doc.crates.io) subcommand which allows easily checking
-out dependencies of a crate for local modification.
+This is a [Cargo](http://doc.crates.io) subcommand which intends to allow easy
+management of the `[replace]` section of Cargo.toml.
 
 ## Installation
 
@@ -34,36 +34,25 @@ version = "0.1.0"
 log = "0.3"
 ```
 
-First up we need to invoke `cargo edit-locally`:
+Let's say we've got a checkout of `log` locally and we'd like to verify it fixes
+our bug:
 
 ```
 $ cd $CODE
-$ cargo edit-locally log
-    Fetching metadata for `log`
-     Cloning https://github.com/rust-lang/log
-Dependency `log` has its source code now located at `log`.
-To use this source code ensure that the following section is added
-to `./Cargo.toml`
-
-    [replace]
-    'log:0.3.7' = { path = 'log' }
-
-
-When you're done working with the source code then you can delete the `[replace]` section entry
+$ cargo edit-locally log --path ../log
+$
 ```
 
-You'll find that there's now a git repository at `$CODE/log`. This code is a
-checked out version of the source code for the `log` crate on crates.io, checked
-out to the commit that was uploaded to crates.io.
-
-After modifying our Cargo.toml to add our [`[replace]`][replace] section:
+And that's it! The local project, `foo`, is now configured to use the `log`
+folder in our local code directory. We can see that `Cargo.toml` now has a
+[`[replace]`][replace] section:
 
 ```toml
 [replace]
 'log:0.3.7' = { path = 'log' }
 ```
 
-We can now use the `log` crate from our local build!
+And finally can now use the `log` crate from our local build!
 
 ```
 $ cargo build
@@ -72,32 +61,17 @@ $ cargo build
     Finished dev [unoptimized + debuginfo] target(s) in 1.97 secs
 ```
 
-All local changes to the local `log` folder will show up immediately and are
-tracked by `cargo build`. The git repository should also allow you to track
-changes over time and even send a PR when ready!
+If we instead would like to test out a git repository we can use:
+
+```
+$ cargo edit-locally log --git https://github.com/rust-lang-nursery/log
+```
 
 To see a full suite of options available to you and another help message, execute:
 
 ```
 $ cargo help edit-locally
 ```
-
-## Git repositories and crates.io
-
-Crates published to crates.io are not guaranteed to have a git repository
-behind them. This crate will check the `repository` field in the crate
-specified. If found the git repository will be checked out and it will probe
-for the correct commit. If not found it will simply copy the sources from
-crates.io.
-
-When looking for the right commit in a git repository this command will search
-for tags or branches corresponding to the version denied, and failing that it
-will traverse backwards through the repository's history looking for the first
-commit with the version mentioned.
-
-Note that these heuristics are sort of best effort, it's recommended that you
-run tests just after adding a `[replace]` section before modifications are
-made. If it looks like the same source as before then you should be good to go.
 
 ## Undoing local edits
 
@@ -108,6 +82,16 @@ folder.
 
 After the `[replace]` section is deleted you can delete the folder of the
 checkout as well, after saving off your work if needed.
+
+## Caveats
+
+This subcommand will automatically attempt to edit `Cargo.toml` and insert a
+`[replace]` section for you. Unfortunately there's no great robust way right now
+to edit TOML file preserving formatting and comments and such, so right now
+there's mostly just a few heuristics to do this automatically.
+
+If you find that the heuristics don't work for you though please let me know and
+I'll try to check in a fix!
 
 # License
 

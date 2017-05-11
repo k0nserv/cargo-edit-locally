@@ -43,6 +43,7 @@ Configure the [replace] section in Cargo.toml to edit a dependency locally
 
 Usage:
     cargo edit-locally [options] <spec>
+    cargo edit-locally (--help | -h)
 
 Options:
     --path PATH              Replace the package specified with a crate at PATH
