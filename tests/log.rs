@@ -1,8 +1,6 @@
-extern crate git2;
-
 use std::env;
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
@@ -46,8 +44,14 @@ fn file(dir: &Path, path: &str, contents: &str) {
     File::create(path).unwrap().write_all(contents.as_bytes()).unwrap();
 }
 
+fn read(path: &Path) -> String {
+    let mut contents = String::new();
+    File::open(path).unwrap().read_to_string(&mut contents).unwrap();
+	contents
+}
+
 #[test]
-fn probe() {
+fn path() {
     // the log 0.3.5 version does not have a tag
     let dir = dir();
 
@@ -61,16 +65,176 @@ fn probe() {
     "#);
     file(&dir, "src/lib.rs", "");
 
-    run(&mut edit_locally(&dir, "log"));
+    file(&dir, "foo/Cargo.toml", r#"
+        [package]
+        name = "log"
+        version = "0.3.5"
+    "#);
+    file(&dir, "foo/src/lib.rs", "");
 
-    let repo = git2::Repository::open(dir.join("log")).unwrap();
-    let id = repo.head().unwrap().target().unwrap().to_string();
-    assert_eq!(id, "5785c972e6037fb15d88486b78163856f1115cc1");
+    run(edit_locally(&dir, "log").arg("--path").arg(dir.join("foo")));
+
+    str_eq(&read(&dir.join("Cargo.toml")), r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = "=0.3.5"
+
+[replace]
+'log:0.3.5' = { path = 'foo' }
+"#);
+
+    let lock = read(&dir.join("Cargo.lock"));
+    assert!(lock.contains("replace"));
 }
 
 #[test]
-fn tag() {
-    // the log 0.3.6 version has a tag
+fn no_newlines() {
+    // the log 0.3.5 version does not have a tag
+    let dir = dir();
+
+    file(&dir, "Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = "=0.3.5""#);
+    file(&dir, "src/lib.rs", "");
+
+    file(&dir, "foo/Cargo.toml", r#"
+        [package]
+        name = "log"
+        version = "0.3.5"
+    "#);
+    file(&dir, "foo/src/lib.rs", "");
+
+    run(edit_locally(&dir, "log").arg("--path").arg(dir.join("foo")));
+
+    str_eq(&read(&dir.join("Cargo.toml")), r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = "=0.3.5"
+
+[replace]
+'log:0.3.5' = { path = 'foo' }
+"#);
+}
+
+#[test]
+fn add_to_existing_replace() {
+    // the log 0.3.5 version does not have a tag
+    let dir = dir();
+
+    file(&dir, "Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = "=0.3.5"
+
+[replace]
+'wut:0.3.5' = { path = 'wut' }
+    "#);
+    file(&dir, "src/lib.rs", "");
+
+    file(&dir, "foo/Cargo.toml", r#"
+        [package]
+        name = "log"
+        version = "0.3.5"
+    "#);
+    file(&dir, "foo/src/lib.rs", "");
+
+    run(edit_locally(&dir, "log").arg("--path").arg(dir.join("foo")));
+
+    str_eq(&read(&dir.join("Cargo.toml")), r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = "=0.3.5"
+
+[replace]
+'log:0.3.5' = { path = 'foo' }
+'wut:0.3.5' = { path = 'wut' }
+    "#);
+}
+
+#[test]
+fn empty_replace() {
+    // the log 0.3.5 version does not have a tag
+    let dir = dir();
+
+    file(&dir, "Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = "=0.3.5"
+
+[replace]
+    "#);
+    file(&dir, "src/lib.rs", "");
+
+    file(&dir, "foo/Cargo.toml", r#"
+        [package]
+        name = "log"
+        version = "0.3.5"
+    "#);
+    file(&dir, "foo/src/lib.rs", "");
+
+    run(edit_locally(&dir, "log").arg("--path").arg(dir.join("foo")));
+
+    str_eq(&read(&dir.join("Cargo.toml")), r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = "=0.3.5"
+
+[replace]
+'log:0.3.5' = { path = 'foo' }
+    "#);
+}
+
+#[test]
+fn wrong_version() {
+    // the log 0.3.5 version does not have a tag
+    let dir = dir();
+
+    file(&dir, "Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = "=0.3.5"
+    "#);
+    file(&dir, "src/lib.rs", "");
+
+    let out = edit_locally(&dir, "log")
+                .arg("--git")
+                .arg("https://github.com/rust-lang-nursery/log")
+                .output()
+                .unwrap();
+    assert!(!out.status.success());
+    let err = String::from_utf8(out.stderr).unwrap();
+    assert!(err.contains("failed to find `log v0.3.5` inside of"));
+    assert!(err.contains("perhaps a different branch/tag is needed?"));
+}
+
+#[test]
+fn git() {
+    // the log 0.3.5 version does not have a tag
     let dir = dir();
 
     file(&dir, "Cargo.toml", r#"
@@ -83,32 +247,42 @@ fn tag() {
     "#);
     file(&dir, "src/lib.rs", "");
 
-    run(&mut edit_locally(&dir, "log"));
-
-    let repo = git2::Repository::open(dir.join("log")).unwrap();
-    let id = repo.head().unwrap().target().unwrap().to_string();
-    assert_eq!(id, "1c79a9c8ddebce3f0037fcdc6783e682cb87bce2");
+    run(edit_locally(&dir, "log")
+                .arg("--git")
+                .arg("https://github.com/rust-lang-nursery/log")
+                .arg("--tag")
+                .arg("0.3.6"));
 }
 
-#[test]
-fn nested() {
-    let dir = dir();
+fn str_eq(a: &str, b: &str) {
+    if a == b {
+        return
+    }
+    if a.lines().count() == b.lines().count() {
+        for (a, b) in a.lines().zip(b.lines()) {
+            if a.trim() == b.trim() {
+                continue
+            }
 
-    file(&dir, "Cargo.toml", r#"
-        [package]
-        name = "foo"
-        version = "0.1.0"
+            panic!("line difference\n{:?}\n{:?}", a, b);
+        }
+        return
+    }
+    let a = xform(a);
+    let b = xform(b);
+    panic!("string differences:\n`{}`\n\n`{}`", a, b);
 
-        [dependencies]
-        env_logger = "=0.4.0"
-    "#);
-    file(&dir, "src/lib.rs", "");
+    fn xform(s: &str) -> String {
+        s.replace("\n", "\u{21b5}\n").chars().map(|c| {
+            if c == ' ' {
+                '\u{b7}'
+            } else {
+                c
+            }
+        }).collect()
+    }
 
-    run(&mut edit_locally(&dir, "env_logger"));
 
-    let repo = git2::Repository::open(dir.join("env_logger")).unwrap();
-    let id = repo.head().unwrap().target().unwrap().to_string();
-    assert_eq!(id, "d0c2f474e586f97fe8c212421beff2e464099874");
 }
 
 fn run(cmd: &mut Command) {
