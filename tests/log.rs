@@ -254,6 +254,45 @@ fn git() {
                 .arg("0.3.6"));
 }
 
+#[test]
+fn git_remote() {
+    // the log 0.3.5 version does not have a tag
+    let dir = dir();
+
+    file(&dir, "Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = { git = 'https://github.com/rust-lang-nursery/log', tag = '0.3.6' }
+    "#);
+    file(&dir, "src/lib.rs", "");
+
+    file(&dir, "foo/Cargo.toml", r#"
+        [package]
+        name = "log"
+        version = "0.3.6"
+    "#);
+    file(&dir, "foo/src/lib.rs", "");
+
+    run(edit_locally(&dir, "log")
+                .arg("--path")
+                .arg("foo"));
+
+    str_eq(&read(&dir.join("Cargo.toml")), r#"
+        [package]
+        name = "foo"
+        version = "0.1.0"
+
+        [dependencies]
+        log = { git = 'https://github.com/rust-lang-nursery/log', tag = '0.3.6' }
+
+[replace]
+'https://github.com/rust-lang-nursery/log#log:0.3.6' = { path = 'foo' }
+"#);
+}
+
 fn str_eq(a: &str, b: &str) {
     if a == b {
         return

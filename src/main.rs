@@ -145,6 +145,16 @@ fn real_main(options: Options, config: &Config) -> CliResult {
         return Err(human(msg).into())
     }
 
+    let crates_io = SourceId::crates_io(config)?;
+    let to_replace_spec = if *to_replace.source_id() == crates_io {
+        format!("{}:{}", to_replace.name(), to_replace.version())
+    } else {
+        format!("{}#{}:{}",
+                to_replace.source_id().url(),
+                to_replace.name(),
+                to_replace.version())
+    };
+
     let replace_line = if replace_with.is_git() {
         let git_extra = match *replace_with.git_reference().unwrap() {
             GitReference::Branch(ref s) if s == "master" => String::new(),
@@ -152,17 +162,15 @@ fn real_main(options: Options, config: &Config) -> CliResult {
             GitReference::Tag(ref t) => format!(", tag = '{}'", t),
             GitReference::Rev(ref r) => format!(", rev = '{}'", r),
         };
-        format!("'{}:{}' = {{ git = '{}'{} }}\n",
-                to_replace.name(),
-                to_replace.version(),
+        format!("'{}' = {{ git = '{}'{} }}\n",
+                to_replace_spec,
                 replace_with.url(),
                 git_extra)
     } else {
         let path = replace_with.url().to_file_path().unwrap();
         let path = path.strip_prefix(ws.root()).unwrap_or(&path);
-        format!("'{}:{}' = {{ path = '{}' }}\n",
-                to_replace.name(),
-                to_replace.version(),
+        format!("'{}' = {{ path = '{}' }}\n",
+                to_replace_spec,
                 path.display())
     };
     let manifest_path = ws.root().join("Cargo.toml");
