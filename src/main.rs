@@ -1,6 +1,7 @@
 extern crate cargo;
 extern crate env_logger;
 extern crate rustc_serialize;
+extern crate toml;
 
 use std::env;
 use std::str;
@@ -12,6 +13,7 @@ use cargo::ops;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::util::paths;
 use cargo::util::{human, ChainError, Config, ToUrl};
+use toml::Value;
 
 macro_rules! bail {
     ($($fmt:tt)*) => (
@@ -158,20 +160,20 @@ fn real_main(options: Options, config: &Config) -> CliResult {
     let replace_line = if replace_with.is_git() {
         let git_extra = match *replace_with.git_reference().unwrap() {
             GitReference::Branch(ref s) if s == "master" => String::new(),
-            GitReference::Branch(ref b) => format!(", branch = '{}'", b),
-            GitReference::Tag(ref t) => format!(", tag = '{}'", t),
-            GitReference::Rev(ref r) => format!(", rev = '{}'", r),
+            GitReference::Branch(ref b) => format!(", branch = \"{}\"", b),
+            GitReference::Tag(ref t) => format!(", tag = \"{}\"", t),
+            GitReference::Rev(ref r) => format!(", rev = \"{}\"", r),
         };
-        format!("'{}' = {{ git = '{}'{} }}\n",
-                to_replace_spec,
-                replace_with.url(),
+        format!("{} = {{ git = {}{} }}\n",
+                Value::String(to_replace_spec.clone()),
+                Value::String(replace_with.url().to_string()),
                 git_extra)
     } else {
         let path = replace_with.url().to_file_path().unwrap();
         let path = path.strip_prefix(ws.root()).unwrap_or(&path);
-        format!("'{}' = {{ path = '{}' }}\n",
-                to_replace_spec,
-                path.display())
+        format!("{} = {{ path = {} }}\n",
+                Value::String(to_replace_spec.clone()),
+                Value::String(path.display().to_string()))
     };
     let manifest_path = ws.root().join("Cargo.toml");
     let mut manifest = paths::read(&manifest_path)?;

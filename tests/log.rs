@@ -83,7 +83,7 @@ fn path() {
         log = "=0.3.5"
 
 [replace]
-'log:0.3.5' = { path = 'foo' }
+"log:0.3.5" = { path = "foo" }
 "#);
 
     let lock = read(&dir.join("Cargo.lock"));
@@ -122,7 +122,7 @@ fn no_newlines() {
         log = "=0.3.5"
 
 [replace]
-'log:0.3.5' = { path = 'foo' }
+"log:0.3.5" = { path = "foo" }
 "#);
 }
 
@@ -140,7 +140,7 @@ fn add_to_existing_replace() {
         log = "=0.3.5"
 
 [replace]
-'wut:0.3.5' = { path = 'wut' }
+"wut:0.3.5" = { path = "wut" }
     "#);
     file(&dir, "src/lib.rs", "");
 
@@ -162,8 +162,8 @@ fn add_to_existing_replace() {
         log = "=0.3.5"
 
 [replace]
-'log:0.3.5' = { path = 'foo' }
-'wut:0.3.5' = { path = 'wut' }
+"log:0.3.5" = { path = "foo" }
+"wut:0.3.5" = { path = "wut" }
     "#);
 }
 
@@ -202,7 +202,7 @@ fn empty_replace() {
         log = "=0.3.5"
 
 [replace]
-'log:0.3.5' = { path = 'foo' }
+"log:0.3.5" = { path = "foo" }
     "#);
 }
 
@@ -289,7 +289,7 @@ fn git_remote() {
         log = { git = 'https://github.com/rust-lang-nursery/log', tag = '0.3.6' }
 
 [replace]
-'https://github.com/rust-lang-nursery/log#log:0.3.6' = { path = 'foo' }
+"https://github.com/rust-lang-nursery/log#log:0.3.6" = { path = "foo" }
 "#);
 }
 
