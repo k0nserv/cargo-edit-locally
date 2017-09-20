@@ -1,10 +1,10 @@
 extern crate cargo;
 extern crate env_logger;
+extern crate pathdiff;
 extern crate rustc_serialize;
 extern crate toml;
 
 use std::env;
-use std::str;
 
 use cargo::CliResult;
 use cargo::core::{Dependency, Source};
@@ -14,12 +14,6 @@ use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::util::paths;
 use cargo::util::{human, ChainError, Config, ToUrl};
 use toml::Value;
-
-macro_rules! bail {
-    ($($fmt:tt)*) => (
-        return Err(::human(&format_args!($($fmt)*)).into())
-    )
-}
 
 #[derive(RustcDecodable)]
 struct Options {
@@ -169,8 +163,14 @@ fn real_main(options: Options, config: &Config) -> CliResult {
                 Value::String(replace_with.url().to_string()),
                 git_extra)
     } else {
-        let path = replace_with.url().to_file_path().unwrap();
-        let path = path.strip_prefix(ws.root()).unwrap_or(&path);
+        let absolute_path = replace_with.url().to_file_path().unwrap();
+        let relative = pathdiff::diff_paths(&absolute_path, ws.root());
+        let path;
+        if let Some(ref buf) = relative {
+            path = buf;
+        } else {
+            path = &absolute_path;
+        }
         format!("{} = {{ path = {} }}\n",
                 Value::String(to_replace_spec.clone()),
                 Value::String(path.display().to_string()))

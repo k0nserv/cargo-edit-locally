@@ -16,6 +16,7 @@ curl = "0.4"
 env_logger = { version = "0.4", default-features = false }
 git2 = "0.6"
 rustc-serialize = "0.3"
+pathdiff = "0.1"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "0.9"
