@@ -1,8 +1,9 @@
 extern crate cargo;
 extern crate env_logger;
 extern crate pathdiff;
-extern crate rustc_serialize;
 extern crate toml;
+#[macro_use]
+extern crate serde_derive;
 
 use std::env;
 
@@ -12,10 +13,11 @@ use cargo::core::{Workspace, SourceId, GitReference};
 use cargo::ops;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::util::paths;
-use cargo::util::{human, ChainError, Config, ToUrl};
+use cargo::util::{Config, ToUrl};
+use cargo::util::errors::*;
 use toml::Value;
 
-#[derive(RustcDecodable)]
+#[derive(Deserialize)]
 struct Options {
     arg_spec: String,
 
@@ -87,7 +89,8 @@ fn real_main(options: Options, config: &Config) -> CliResult {
                      options.flag_quiet,
                      &options.flag_color,
                      /* frozen = */ false,
-                     /* locked = */ false)?;
+                     /* locked = */ false,
+                     /* unstable features = */ &[])?;
 
     // Load up and resolve the crate. This'll do the whole 'Updateing registry'
     // thing in Cargo, creating a lock file if one doesn't exist or reading it
@@ -95,8 +98,8 @@ fn real_main(options: Options, config: &Config) -> CliResult {
     let manifest = find_root_manifest_for_wd(options.flag_manifest_path,
                                              config.cwd())?;
     let ws = Workspace::new(&manifest, config)?;
-    let (_packages, resolve) = cargo::ops::resolve_ws(&ws).chain_error(|| {
-        human("failed resolve crate")
+    let (_packages, resolve) = cargo::ops::resolve_ws(&ws).chain_err(|| {
+        "failed resolve crate"
     })?;
 
     let to_replace = resolve.query(&options.arg_spec)?;
@@ -105,8 +108,8 @@ fn real_main(options: Options, config: &Config) -> CliResult {
         let path = paths::normalize_path(&config.cwd().join(p));
         SourceId::for_path(&path)?
     } else {
-        let url = options.flag_git.chain_error(|| {
-            human("either --git or --path must be specified")
+        let url = options.flag_git.ok_or_else(|| {
+            CargoError::from("either --git or --path must be specified")
         })?.to_url()?;
         let reference = if let Some(b) = options.flag_branch {
             GitReference::Branch(b)
@@ -117,17 +120,17 @@ fn real_main(options: Options, config: &Config) -> CliResult {
         } else {
             GitReference::Branch("master".to_string())
         };
-        SourceId::for_git(&url, reference)
+        SourceId::for_git(&url, reference)?
     };
 
-    let mut source = replace_with.load(config);
+    let mut source = replace_with.load(config)?;
     source.update()?;
 
     let req = format!("={}", to_replace.version().to_string());
     let dependency = Dependency::parse_no_deprecated(to_replace.name(),
                                                      Some(&req),
                                                      &replace_with)?;
-    let candidates = source.query(&dependency)?;
+    let candidates = source.query_vec(&dependency)?;
     if candidates.len() == 0 {
         let mut msg = format!("failed to find `{} v{}` inside of `{}`\n",
                               to_replace.name(),
@@ -138,7 +141,7 @@ fn real_main(options: Options, config: &Config) -> CliResult {
         } else {
             msg.push_str(&format!("perhaps this path contains the wrong version?"));
         }
-        return Err(human(msg).into())
+        return Err(CargoError::from(msg).into())
     }
 
     let crates_io = SourceId::crates_io(config)?;
@@ -190,8 +193,10 @@ fn real_main(options: Options, config: &Config) -> CliResult {
         }
         None => {
             if manifest.contains("[replace]") {
-                return Err(human(format!("don't know how to auto-modify `{}`",
-                                         manifest_path.display())).into())
+                return Err(CargoError::from(
+                    format!("don't know how to auto-modify `{}`",
+                            manifest_path.display())
+                ).into())
             }
 
             if manifest.split('\n').rev().take_while(|s| s.trim().is_empty()).count() == 0 {
