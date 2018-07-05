@@ -11,10 +11,12 @@ A Cargo subcommand to edit dependencies locally via `[replace]`
 """
 
 [dependencies]
-cargo = "0.22"
+cargo = "0.28"
 curl = "0.4"
-env_logger = { version = "0.4", default-features = false }
-git2 = "0.6"
+docopt = "1.0"
+env_logger = { version = "0.5", default-features = false }
+failure = "0.1"
+git2 = "0.7"
 pathdiff = "0.1"
 serde = "1.0"
 serde_derive = "1.0"

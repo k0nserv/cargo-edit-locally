@@ -1,21 +1,22 @@
 extern crate cargo;
+extern crate docopt;
 extern crate env_logger;
 extern crate pathdiff;
 extern crate toml;
 #[macro_use]
+extern crate failure;
+#[macro_use]
 extern crate serde_derive;
 
-use std::env;
-
-use cargo::CliResult;
 use cargo::core::{Dependency, Source};
 use cargo::core::{Workspace, SourceId, GitReference};
 use cargo::ops;
+use cargo::util::errors::*;
 use cargo::util::important_paths::find_root_manifest_for_wd;
 use cargo::util::paths;
 use cargo::util::{Config, ToUrl};
-use cargo::util::errors::*;
 use toml::Value;
+use docopt::Docopt;
 
 #[derive(Deserialize)]
 struct Options {
@@ -33,10 +34,9 @@ struct Options {
 }
 
 fn main() {
-    env_logger::init().unwrap();
-    let config = Config::default().unwrap();
-    let args = env::args().collect::<Vec<_>>();
-    let result = cargo::call_main_without_stdin(real_main, &config, r#"
+    env_logger::init();
+    let mut config = Config::default().unwrap();
+    let usage = r#"
 Configure the [replace] section in Cargo.toml to edit a dependency locally
 
 Usage:
@@ -77,26 +77,32 @@ Some example invocations are:
 If you have any questions about how to use this subcommand or would like to
 see a new feature, please feel free to open an issue at
 https://github.com/alexcrichton/cargo-edit-locally
-"#, &args, false);
-
+"#;
+    let options = Docopt::new(usage)
+        .and_then(|d| d.deserialize())
+        .unwrap_or_else(|e| e.exit());
+    let result = real_main(options, &mut config);
     if let Err(e) = result {
-        cargo::exit_with_error(e, &mut *config.shell());
+        cargo::exit_with_error(e.into(), &mut *config.shell());
     }
 }
 
-fn real_main(options: Options, config: &Config) -> CliResult {
+fn real_main(options: Options, config: &mut Config) -> CargoResult<()> {
     config.configure(options.flag_verbose,
                      options.flag_quiet,
                      &options.flag_color,
                      /* frozen = */ false,
                      /* locked = */ false,
+                     /* target_dir = */ &None,
                      /* unstable features = */ &[])?;
 
     // Load up and resolve the crate. This'll do the whole 'Updateing registry'
     // thing in Cargo, creating a lock file if one doesn't exist or reading it
     // if it does.
-    let manifest = find_root_manifest_for_wd(options.flag_manifest_path,
-                                             config.cwd())?;
+    let manifest = match options.flag_manifest_path {
+        Some(path) => path.into(),
+        None => find_root_manifest_for_wd(config.cwd())?,
+    };
     let ws = Workspace::new(&manifest, config)?;
     let (_packages, resolve) = cargo::ops::resolve_ws(&ws).chain_err(|| {
         "failed resolve crate"
@@ -109,7 +115,7 @@ fn real_main(options: Options, config: &Config) -> CliResult {
         SourceId::for_path(&path)?
     } else {
         let url = options.flag_git.ok_or_else(|| {
-            CargoError::from("either --git or --path must be specified")
+            format_err!("either --git or --path must be specified")
         })?.to_url()?;
         let reference = if let Some(b) = options.flag_branch {
             GitReference::Branch(b)
@@ -127,7 +133,7 @@ fn real_main(options: Options, config: &Config) -> CliResult {
     source.update()?;
 
     let req = format!("={}", to_replace.version().to_string());
-    let dependency = Dependency::parse_no_deprecated(to_replace.name(),
+    let dependency = Dependency::parse_no_deprecated(&to_replace.name(),
                                                      Some(&req),
                                                      &replace_with)?;
     let candidates = source.query_vec(&dependency)?;
@@ -141,7 +147,7 @@ fn real_main(options: Options, config: &Config) -> CliResult {
         } else {
             msg.push_str(&format!("perhaps this path contains the wrong version?"));
         }
-        return Err(CargoError::from(msg).into())
+        bail!("{}", msg)
     }
 
     let crates_io = SourceId::crates_io(config)?;
@@ -193,10 +199,8 @@ fn real_main(options: Options, config: &Config) -> CliResult {
         }
         None => {
             if manifest.contains("[replace]") {
-                return Err(CargoError::from(
-                    format!("don't know how to auto-modify `{}`",
-                            manifest_path.display())
-                ).into())
+                bail!("don't know how to auto-modify `{}`",
+                      manifest_path.display())
             }
 
             if manifest.split('\n').rev().take_while(|s| s.trim().is_empty()).count() == 0 {
