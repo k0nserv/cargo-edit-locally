@@ -11,7 +11,7 @@ A Cargo subcommand to edit dependencies locally via `[replace]`
 """
 
 [dependencies]
-cargo = "0.30"
+cargo = "0.31"
 curl = "0.4"
 docopt = "1.0"
 env_logger = { version = "0.5", default-features = false }
