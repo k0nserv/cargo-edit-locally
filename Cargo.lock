@@ -266,7 +266,7 @@ version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "crossbeam-utils 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "smallvec 0.6.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1105,7 +1105,7 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "0.6.9"
+version = "0.6.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -1242,7 +1242,7 @@ name = "unicode-normalization"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "smallvec 0.6.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1469,7 +1469,7 @@ dependencies = [
 "checksum serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)" = "051c49229f282f7c6f3813f8286cc1e3323e8051823fce42c7ea80fe13521704"
 "checksum shell-escape 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "170a13e64f2a51b77a45702ba77287f5c6829375b04a69cf2222acd17d0cfab9"
 "checksum sized-chunks 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "882678bcc6f62ef6bb83ce1b7dbbec316f24a2be7f3033acc107d3b11735cb50"
-"checksum smallvec 0.6.9 (registry+https://github.com/rust-lang/crates.io-index)" = "c4488ae950c49d403731982257768f48fada354a5203fe81f9bb6f43ca9002be"
+"checksum smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)" = "ab606a9c5e214920bb66c458cd7be8ef094f813f20fe77a54cc7dbfff220d4b7"
 "checksum socket2 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "c4d11a52082057d87cb5caa31ad812f4504b97ab44732cd8359df2e9ff9f48e7"
 "checksum strsim 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 "checksum strsim 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "34ac666ab1423aa93bbd4cd47b6e62db5a846df4e28b959d823776eed5b57643"
