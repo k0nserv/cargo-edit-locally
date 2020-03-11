@@ -13,7 +13,7 @@ edition = "2018"
 
 [dependencies]
 cargo = "0.36.0"
-curl = "0.4.26"
+curl = "0.4.27"
 docopt = "1.1.0"
 env_logger = { version = "0.7.1", default-features = false }
 failure = "0.1.6"
