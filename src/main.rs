@@ -1,14 +1,15 @@
-use cargo::core::{Dependency, Source};
+use anyhow::{bail, format_err, Context, Result};
+use cargo::core::Dependency;
 use cargo::core::{GitReference, SourceId, Workspace};
 use cargo::ops;
-use cargo::util::errors::*;
 use cargo::util::important_paths::find_root_manifest_for_wd;
-use cargo::util::paths;
-use cargo::util::{Config, ToUrl};
+use cargo::util::Config;
+use cargo_util::paths;
 use docopt::Docopt;
-use failure::{bail, format_err};
 use serde::Deserialize;
 use toml::Value;
+
+use url::Url;
 
 #[derive(Deserialize)]
 struct Options {
@@ -79,15 +80,17 @@ https://github.com/alexcrichton/cargo-edit-locally
     }
 }
 
-fn real_main(options: Options, config: &mut Config) -> CargoResult<()> {
+fn real_main(options: Options, config: &mut Config) -> Result<()> {
     config.configure(
         options.flag_verbose,
-        options.flag_quiet,
-        &options.flag_color,
+        options.flag_quiet.unwrap_or(false),
+        options.flag_color.as_ref().map(String::as_str),
         /* frozen = */ false,
         /* locked = */ false,
+        /* offline = */ false,
         /* target_dir = */ &None,
         /* unstable features = */ &[],
+        /* cli_config = */ &[],
     )?;
 
     // Load up and resolve the crate. This'll do the whole 'Updateing registry'
@@ -98,7 +101,8 @@ fn real_main(options: Options, config: &mut Config) -> CargoResult<()> {
         None => find_root_manifest_for_wd(config.cwd())?,
     };
     let ws = Workspace::new(&manifest, config)?;
-    let (_packages, resolve) = cargo::ops::resolve_ws(&ws).chain_err(|| "failed resolve crate")?;
+    let (_packages, resolve) =
+        cargo::ops::resolve_ws(&ws).with_context(|| "failed resolve crate")?;
 
     let to_replace = resolve.query(&options.arg_spec)?;
 
@@ -108,8 +112,8 @@ fn real_main(options: Options, config: &mut Config) -> CargoResult<()> {
     } else {
         let url = options
             .flag_git
-            .ok_or_else(|| format_err!("either --git or --path must be specified"))?
-            .to_url()?;
+            .ok_or_else(|| format_err!("either --git or --path must be specified"))
+            .and_then(|s| Url::parse(&s).map_err(Into::into))?;
         let reference = if let Some(b) = options.flag_branch {
             GitReference::Branch(b)
         } else if let Some(t) = options.flag_tag {
@@ -123,11 +127,13 @@ fn real_main(options: Options, config: &mut Config) -> CargoResult<()> {
     };
 
     let mut source = replace_with.load(config, &Default::default())?;
-    source.update()?;
+    {
+        let _lock = config.acquire_package_cache_lock()?;
+        source.update()?;
+    }
 
     let req = format!("={}", to_replace.version().to_string());
-    let dependency =
-        Dependency::parse_no_deprecated(&to_replace.name(), Some(&req), replace_with)?;
+    let dependency = Dependency::parse(to_replace.name(), Some(&req), replace_with)?;
     let candidates = source.query_vec(&dependency)?;
     if candidates.len() == 0 {
         let mut msg = format!(
@@ -162,6 +168,7 @@ fn real_main(options: Options, config: &mut Config) -> CargoResult<()> {
             GitReference::Branch(ref b) => format!(", branch = \"{}\"", b),
             GitReference::Tag(ref t) => format!(", tag = \"{}\"", t),
             GitReference::Rev(ref r) => format!(", rev = \"{}\"", r),
+            GitReference::DefaultBranch => format!(", rev = \"HEAD\""),
         };
         format!(
             "{} = {{ git = {}{} }}\n",
