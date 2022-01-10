@@ -21,7 +21,7 @@ test_script:
 
 branches:
   only:
-    - master
+    - main
 
 before_deploy:
   - ps: |

@@ -1,7 +1,7 @@
 # cargo-edit-locally
 
-[![Build Status](https://travis-ci.org/alexcrichton/cargo-edit-locally.svg?branch=master)](https://travis-ci.org/alexcrichton/cargo-edit-locally)
-[![Build status](https://ci.appveyor.com/api/projects/status/qx69c85cp1irk0ps?svg=true)](https://ci.appveyor.com/project/alexcrichton/cargo-edit-locally)
+[![Build Status](https://travis-ci.org/k0nserv/cargo-edit-locally.svg?branch=main)](https://travis-ci.org/k0nserv/cargo-edit-locally)
+[![Build status](https://ci.appveyor.com/api/projects/status/qx69c85cp1irk0ps?svg=true)](https://ci.appveyor.com/project/k0nserv/cargo-edit-locally)
 
 This is a [Cargo](http://doc.crates.io) subcommand which intends to allow easy
 management of the `[replace]` section of Cargo.toml.
