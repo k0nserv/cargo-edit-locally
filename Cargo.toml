@@ -1,11 +1,11 @@
 [package]
 name = "cargo-edit-locally"
-version = "0.1.3"
-authors = ["Alex Crichton <alex@alexcrichton.com>"]
+version = "0.2.0"
+authors = ["Alex Crichton <alex@alexcrichton.com>", "Hugo Tunius <h@tunius.se>"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
 keywords = ["subcommand"]
-repository = "https://github.com/alexcrichton/cargo-edit-locally"
+repository = "https://github.com/k0nserv/cargo-edit-locally"
 description = """
 A Cargo subcommand to edit dependencies locally via `[replace]`
 """
