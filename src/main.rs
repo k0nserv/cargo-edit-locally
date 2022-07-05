@@ -129,12 +129,16 @@ fn real_main(options: Options, config: &mut Config) -> Result<()> {
     let mut source = replace_with.load(config, &Default::default())?;
     {
         let _lock = config.acquire_package_cache_lock()?;
-        source.update()?;
+        source.invalidate_cache();
+        source.block_until_ready()?;
     }
 
     let req = format!("={}", to_replace.version().to_string());
     let dependency = Dependency::parse(to_replace.name(), Some(&req), replace_with)?;
-    let candidates = source.query_vec(&dependency)?;
+    let candidates = match source.query_vec(&dependency) {
+        std::task::Poll::Ready(c) => c?,
+        std::task::Poll::Pending => unreachable!(),
+    };
     if candidates.len() == 0 {
         let mut msg = format!(
             "failed to find `{} v{}` inside of `{}`\n",
