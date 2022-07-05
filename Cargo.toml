@@ -9,22 +9,22 @@ repository = "https://github.com/k0nserv/cargo-edit-locally"
 description = """
 A Cargo subcommand to edit dependencies locally via `[replace]`
 """
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-anyhow = "1"
-cargo = "0.56.0"
-cargo-util = "0.1"
-curl = "0.4.26"
-docopt = "1.1.0"
-env_logger = { version = "0.9", default-features = false }
-git2 = "0.13"
-pathdiff = "0.2"
-serde = { version = "1.0.104", features = ['derive'] }
-serde_json = "1.0.48"
-toml = "0.5.6"
-url = "*"
-openssl = { version = '0.10.28', optional = true }
+anyhow = "1.0.58"
+cargo = "0.63.1"
+cargo-util = "0.2.0"
+curl = "0.4.43"
+docopt = "1.1.1"
+env_logger = { version = "0.9.0", default-features = false }
+git2 = "0.14.4"
+pathdiff = "0.2.1"
+serde = { version = "1.0.138", features = ['derive'] }
+serde_json = "1.0.82"
+toml = "0.5.9"
+url = "2.2.2"
+openssl = { version = "0.10.40", optional = true }
 
 [features]
 vendored-openssl = ['openssl/vendored']
